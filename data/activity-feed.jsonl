@@ -8,3 +8,10 @@
 {"id":"evt-008","timestamp":"2026-01-29T00:20:00Z","type":"deliverable_created","summary":"Mission Control repo created: github.com/cpmullican/mission-control","metadata":{"path":"github:cpmullican/mission-control"}}
 {"id":"evt-009","timestamp":"2026-01-29T00:50:00Z","type":"task_completed","summary":"Fixed Streamlit page config issue","metadata":{}}
 {"id":"evt-010","timestamp":"2026-01-29T00:55:00Z","type":"task_started","summary":"Building session detail view and auto-refresh","metadata":{}}
+{
+  "id": "evt-1769648443304",
+  "timestamp": "2026-01-29T01:00:43Z",
+  "type": "task_completed",
+  "summary": "Added cron jobs view to Mission Control dashboard",
+  "metadata": {}
+}
