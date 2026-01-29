@@ -13,8 +13,26 @@ from typing import Optional
 import streamlit as st
 
 # Configuration
-WORKSPACE_PATH = os.environ.get("WORKSPACE_PATH", "/root/clawd")
+# Try workspace path first, fall back to local data/ folder for deployed version
+WORKSPACE_PATH = os.environ.get("WORKSPACE_PATH", "")
+DATA_SUBDIR = "memory/dashboard"
+LOCAL_DATA_PATH = Path(__file__).parent / "data"
 REFRESH_INTERVAL = 30  # seconds
+
+
+def get_data_path(filename: str) -> Path:
+    """Get path to data file, checking workspace first then local."""
+    if WORKSPACE_PATH:
+        workspace_file = Path(WORKSPACE_PATH) / DATA_SUBDIR / filename
+        if workspace_file.exists():
+            return workspace_file
+    
+    # Fall back to local data/ folder
+    local_file = LOCAL_DATA_PATH / filename
+    if local_file.exists():
+        return local_file
+    
+    return None
 
 # Page config
 st.set_page_config(
@@ -25,36 +43,36 @@ st.set_page_config(
 )
 
 
-def load_json_file(path: str) -> Optional[dict]:
+def load_json_file(filename: str) -> Optional[dict]:
     """Load JSON file, return None if not found."""
     try:
-        full_path = Path(WORKSPACE_PATH) / path
-        if full_path.exists():
+        full_path = get_data_path(filename)
+        if full_path and full_path.exists():
             with open(full_path) as f:
                 return json.load(f)
     except Exception as e:
-        st.error(f"Error loading {path}: {e}")
+        st.error(f"Error loading {filename}: {e}")
     return None
 
 
-def load_jsonl_file(path: str, limit: int = 100) -> list:
+def load_jsonl_file(filename: str, limit: int = 100) -> list:
     """Load JSONL file, return last N entries."""
     try:
-        full_path = Path(WORKSPACE_PATH) / path
-        if full_path.exists():
+        full_path = get_data_path(filename)
+        if full_path and full_path.exists():
             with open(full_path) as f:
                 lines = f.readlines()
                 # Get last N lines
                 recent = lines[-limit:] if len(lines) > limit else lines
                 return [json.loads(line) for line in recent if line.strip()]
     except Exception as e:
-        st.error(f"Error loading {path}: {e}")
+        st.error(f"Error loading {filename}: {e}")
     return []
 
 
 def get_agent_status() -> dict:
     """Get current agent status."""
-    status_file = load_json_file("memory/dashboard/status.json")
+    status_file = load_json_file("status.json")
     if status_file:
         return status_file
     
@@ -69,7 +87,7 @@ def get_agent_status() -> dict:
 
 def get_sessions() -> list:
     """Get session list."""
-    sessions_file = load_json_file("memory/dashboard/sessions.json")
+    sessions_file = load_json_file("sessions.json")
     if sessions_file:
         return sessions_file.get("sessions", [])
     return []
@@ -77,12 +95,12 @@ def get_sessions() -> list:
 
 def get_subagent_tasks() -> list:
     """Get sub-agent task log."""
-    return load_jsonl_file("memory/dashboard/subagent-log.jsonl", limit=50)
+    return load_jsonl_file("subagent-log.jsonl", limit=50)
 
 
 def get_activity_feed() -> list:
     """Get activity event feed."""
-    return load_jsonl_file("memory/dashboard/activity-feed.jsonl", limit=100)
+    return load_jsonl_file("activity-feed.jsonl", limit=100)
 
 
 def format_timestamp(iso_str: str) -> str:

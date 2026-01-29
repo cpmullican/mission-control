@@ -1,0 +1,16 @@
+{
+  "sessions": [
+    {
+      "key": "main",
+      "kind": "main",
+      "status": "active",
+      "last_activity": "2026-01-29T00:15:00Z",
+      "last_message_preview": "okay yeah sounds good to me",
+      "metadata": {
+        "source": "telegram",
+        "user_name": "Christian"
+      }
+    }
+  ],
+  "updated_at": "2026-01-29T00:15:00Z"
+}

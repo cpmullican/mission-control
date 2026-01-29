@@ -1,0 +1,10 @@
+{
+  "online": true,
+  "last_activity": "2026-01-29T00:15:00Z",
+  "active_sessions": 1,
+  "running_subagents": 0,
+  "next_scheduled_task": {
+    "name": "heartbeat-check",
+    "next_run": null
+  }
+}
