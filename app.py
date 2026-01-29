@@ -49,6 +49,7 @@ def get_data_path(filename: str) -> Optional[Path]:
     return None
 
 
+@st.cache_data(ttl=10)  # Cache for 10 seconds
 def load_json_file(filename: str) -> Optional[dict]:
     """Load JSON file, return None if not found."""
     try:
@@ -56,11 +57,17 @@ def load_json_file(filename: str) -> Optional[dict]:
         if full_path and full_path.exists():
             with open(full_path) as f:
                 return json.load(f)
+    except json.JSONDecodeError as e:
+        # Silent fail for JSON errors - data may be updating
+        return None
     except Exception as e:
-        st.error(f"Error loading {filename}: {e}")
+        # Only show error for unexpected issues
+        if "ENOENT" not in str(e) and "No such file" not in str(e):
+            st.error(f"Error loading {filename}: {e}")
     return None
 
 
+@st.cache_data(ttl=10)  # Cache for 10 seconds
 def load_jsonl_file(filename: str, limit: int = 100) -> list:
     """Load JSONL file, return last N entries."""
     try:
@@ -69,9 +76,17 @@ def load_jsonl_file(filename: str, limit: int = 100) -> list:
             with open(full_path) as f:
                 lines = f.readlines()
                 recent = lines[-limit:] if len(lines) > limit else lines
-                return [json.loads(line) for line in recent if line.strip()]
+                result = []
+                for line in recent:
+                    if line.strip():
+                        try:
+                            result.append(json.loads(line))
+                        except json.JSONDecodeError:
+                            continue  # Skip malformed lines
+                return result
     except Exception as e:
-        st.error(f"Error loading {filename}: {e}")
+        if "ENOENT" not in str(e) and "No such file" not in str(e):
+            st.error(f"Error loading {filename}: {e}")
     return []
 
 
@@ -192,13 +207,13 @@ def render_status_indicator(online: bool, last_activity: str):
 
 
 def render_metric_card(label: str, value: str, subtitle: str = ""):
-    """Render a metric card."""
-    subtitle_html = f'<div style="color: #6b7280; font-size: 12px;">{subtitle}</div>' if subtitle else ""
+    """Render a metric card - mobile optimized."""
+    subtitle_html = f'<div style="color: #6b7280; font-size: 11px;">{subtitle}</div>' if subtitle else ""
     st.markdown(
         f"""
-        <div style="background: #111827; border: 1px solid #1f2937; border-radius: 12px; padding: 16px; text-align: center;">
-            <div style="color: #9ca3af; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em;">{label}</div>
-            <div style="color: #ffffff; font-size: 32px; font-weight: 700; margin: 4px 0;">{value}</div>
+        <div style="background: #111827; border: 1px solid #1f2937; border-radius: 12px; padding: 12px 8px; text-align: center; min-height: 80px;">
+            <div style="color: #9ca3af; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">{label}</div>
+            <div style="color: #ffffff; font-size: 24px; font-weight: 700; margin: 2px 0; overflow: hidden; text-overflow: ellipsis;">{value}</div>
             {subtitle_html}
         </div>
         """,
@@ -689,6 +704,20 @@ def page_activity():
 def main():
     """Main app entry point."""
     
+    # Error boundary for the whole app
+    try:
+        _main_content()
+    except Exception as e:
+        st.error(f"Something went wrong: {e}")
+        st.info("Try refreshing the page. If the issue persists, data may be temporarily unavailable.")
+        if st.button("🔄 Retry"):
+            st.cache_data.clear()
+            st.rerun()
+
+
+def _main_content():
+    """Main app content (wrapped for error handling)."""
+    
     # Auto-refresh
     if AUTO_REFRESH_ENABLED and HAS_AUTOREFRESH:
         # Using streamlit-autorefresh for reliable auto-refresh
@@ -700,34 +729,79 @@ def main():
             unsafe_allow_html=True,
         )
     
-    # Custom CSS
+    # Custom CSS with mobile optimization
     st.markdown(
         """
         <style>
+            /* Base dark theme */
             .stApp { background-color: #030712; }
             .stMarkdown { color: #e5e7eb; }
             section[data-testid="stSidebar"] { background-color: #111827; }
+            
+            /* Buttons - larger touch targets */
             .stButton > button {
                 background-color: #1f2937;
                 color: #e5e7eb;
                 border: 1px solid #374151;
+                min-height: 44px;
+                padding: 8px 16px;
             }
             .stButton > button:hover {
                 background-color: #374151;
                 border-color: #4b5563;
             }
+            
+            /* Form elements */
             .stSelectbox > div > div { background-color: #1f2937; color: #e5e7eb; }
-            .stTabs [data-baseweb="tab-list"] { gap: 8px; }
+            
+            /* Tabs - responsive */
+            .stTabs [data-baseweb="tab-list"] { 
+                gap: 4px;
+                flex-wrap: wrap;
+            }
             .stTabs [data-baseweb="tab"] {
                 background-color: #1f2937;
                 border-radius: 8px;
-                padding: 8px 16px;
+                padding: 8px 12px;
                 color: #9ca3af;
+                font-size: 14px;
+                min-height: 44px;
             }
             .stTabs [aria-selected="true"] {
                 background-color: #374151;
                 color: #ffffff;
             }
+            
+            /* Mobile-specific styles */
+            @media (max-width: 768px) {
+                /* Smaller text on mobile */
+                .stMarkdown h1 { font-size: 1.5rem !important; }
+                .stMarkdown h3 { font-size: 1.1rem !important; }
+                
+                /* Stack tabs vertically on very small screens */
+                .stTabs [data-baseweb="tab-list"] {
+                    gap: 2px;
+                }
+                .stTabs [data-baseweb="tab"] {
+                    padding: 6px 8px;
+                    font-size: 12px;
+                }
+                
+                /* Metric cards stack better */
+                .stMetric { padding: 8px !important; }
+                
+                /* Cards full width */
+                [data-testid="column"] {
+                    padding: 0 4px !important;
+                }
+            }
+            
+            /* Hide Streamlit branding */
+            #MainMenu { visibility: hidden; }
+            footer { visibility: hidden; }
+            
+            /* Smooth transitions */
+            * { transition: background-color 0.2s, border-color 0.2s; }
         </style>
         """,
         unsafe_allow_html=True,
