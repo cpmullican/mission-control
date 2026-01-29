@@ -12,6 +12,14 @@ from typing import Optional
 
 import streamlit as st
 
+# Page config - MUST be first Streamlit command
+st.set_page_config(
+    page_title="Alfred Mission Control",
+    page_icon="🎩",
+    layout="wide",
+    initial_sidebar_state="collapsed",
+)
+
 # Configuration
 # Try workspace path first, fall back to local data/ folder for deployed version
 WORKSPACE_PATH = os.environ.get("WORKSPACE_PATH", "")
@@ -33,14 +41,6 @@ def get_data_path(filename: str) -> Path:
         return local_file
     
     return None
-
-# Page config
-st.set_page_config(
-    page_title="Alfred Mission Control",
-    page_icon="🎩",
-    layout="wide",
-    initial_sidebar_state="collapsed",
-)
 
 
 def load_json_file(filename: str) -> Optional[dict]:
