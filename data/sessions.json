@@ -4,13 +4,23 @@
       "key": "main",
       "kind": "main",
       "status": "active",
-      "last_activity": "2026-01-29T00:15:00Z",
-      "last_message_preview": "okay yeah sounds good to me",
+      "last_activity": "2026-01-29T00:52:00Z",
+      "last_message_preview": "nice, continue on.",
       "metadata": {
         "source": "telegram",
         "user_name": "Christian"
       }
+    },
+    {
+      "key": "cron:heartbeat",
+      "kind": "cron",
+      "status": "idle",
+      "last_activity": "2026-01-29T00:30:00Z",
+      "last_message_preview": "HEARTBEAT_OK",
+      "metadata": {
+        "source": "cron"
+      }
     }
   ],
-  "updated_at": "2026-01-29T00:15:00Z"
+  "updated_at": "2026-01-29T00:55:00Z"
 }
