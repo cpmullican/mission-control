@@ -122,6 +122,14 @@ def get_cron_jobs() -> list:
     return []
 
 
+def get_deliverables() -> list:
+    """Get deliverables catalog."""
+    deliverables_file = load_json_file("deliverables.json")
+    if deliverables_file:
+        return deliverables_file.get("items", [])
+    return []
+
+
 def format_timestamp(iso_str: str) -> str:
     """Format ISO timestamp for display."""
     try:
@@ -488,6 +496,79 @@ def page_subagents():
         st.markdown("*No completed sub-agents recorded*")
 
 
+def page_deliverables():
+    """Deliverables catalog page."""
+    st.markdown("# Deliverables")
+    
+    deliverables = get_deliverables()
+    
+    # Group by category
+    categories = {}
+    for item in deliverables:
+        cat = item.get("category", "Uncategorized")
+        if cat not in categories:
+            categories[cat] = []
+        categories[cat].append(item)
+    
+    # Filter
+    if categories:
+        cat_options = ["All"] + list(categories.keys())
+        selected_cat = st.selectbox("Filter by category", cat_options)
+        
+        if selected_cat != "All":
+            filtered = {selected_cat: categories[selected_cat]}
+        else:
+            filtered = categories
+        
+        total_count = sum(len(items) for items in filtered.values())
+        st.markdown(f"**{total_count} deliverables**")
+        st.markdown("---")
+        
+        for category, items in filtered.items():
+            st.markdown(f"### 📁 {category}")
+            
+            for item in items:
+                name = item.get("name", "Unnamed")
+                description = item.get("description", "")[:100]
+                path = item.get("path", "")
+                created = format_time_ago(item.get("created", "")) if item.get("created") else "—"
+                file_type = item.get("type", "document")
+                
+                type_icons = {
+                    "document": "📄",
+                    "spreadsheet": "📊",
+                    "template": "📋",
+                    "tool": "🔧",
+                    "research": "🔍",
+                    "sop": "📝",
+                }
+                icon = type_icons.get(file_type, "📄")
+                
+                st.markdown(
+                    f"""
+                    <div style="background: #111827; border: 1px solid #1f2937; border-radius: 12px; padding: 16px; margin-bottom: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <span style="color: #ffffff; font-weight: 600;">{icon} {name}</span>
+                            <span style="color: #6b7280; font-size: 12px;">{created}</span>
+                        </div>
+                        <div style="color: #9ca3af; font-size: 14px;">{description}</div>
+                        <div style="color: #6b7280; font-size: 12px; margin-top: 8px; font-family: monospace;">{path}</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+    else:
+        st.info(
+            "No deliverables cataloged yet.\n\n"
+            "Deliverables will appear here as Alfred produces files and documents."
+        )
+    
+    # Refresh button
+    st.markdown("---")
+    if st.button("🔄 Refresh", key="deliverables_refresh"):
+        st.rerun()
+
+
 def page_cron():
     """Cron jobs page."""
     st.markdown("# Scheduled Jobs")
@@ -657,7 +738,7 @@ def main():
         st.session_state.page = "home"
     
     # Navigation tabs
-    tabs = st.tabs(["🏠 Home", "💬 Sessions", "🤖 Sub-Agents", "⏰ Cron", "📋 Activity"])
+    tabs = st.tabs(["🏠 Home", "💬 Sessions", "🤖 Sub-Agents", "⏰ Cron", "📦 Deliverables", "📋 Activity"])
     
     with tabs[0]:
         page_home()
@@ -675,6 +756,9 @@ def main():
         page_cron()
     
     with tabs[4]:
+        page_deliverables()
+    
+    with tabs[5]:
         page_activity()
 
 

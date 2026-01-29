@@ -1,0 +1,164 @@
+{
+  "items": [
+    {
+      "name": "Deal Flow Tracker",
+      "description": "Pipeline tracking template for YouTube channel acquisitions",
+      "path": "onedrive:Alfred/Deliverables/Deal-Ops/deal-flow-tracker.md",
+      "category": "Deal Operations",
+      "type": "template",
+      "created": "2026-01-28T06:00:00Z"
+    },
+    {
+      "name": "Channel Diligence Checklist",
+      "description": "10-section due diligence framework for channel evaluation",
+      "path": "onedrive:Alfred/Deliverables/Deal-Ops/channel-diligence-checklist.md",
+      "category": "Deal Operations",
+      "type": "document",
+      "created": "2026-01-28T06:30:00Z"
+    },
+    {
+      "name": "Channel Sourcing Playbook",
+      "description": "Broker contacts, outreach templates, sourcing strategies",
+      "path": "onedrive:Alfred/Deliverables/Deal-Ops/channel-sourcing-playbook.md",
+      "category": "Deal Operations",
+      "type": "sop",
+      "created": "2026-01-28T07:00:00Z"
+    },
+    {
+      "name": "Deal Memo Template",
+      "description": "Investment committee review format for acquisition decisions",
+      "path": "onedrive:Alfred/Deliverables/Deal-Ops/deal-memo-template.md",
+      "category": "Deal Operations",
+      "type": "template",
+      "created": "2026-01-28T07:30:00Z"
+    },
+    {
+      "name": "Legal Acquisition Checklist",
+      "description": "Legal and compliance checklist for channel purchases",
+      "path": "onedrive:Alfred/Deliverables/Deal-Ops/legal-acquisition-checklist.md",
+      "category": "Deal Operations",
+      "type": "document",
+      "created": "2026-01-28T08:00:00Z"
+    },
+    {
+      "name": "Investor Deck Outline",
+      "description": "15-slide fundraising deck structure",
+      "path": "onedrive:Alfred/Deliverables/Fundraising/investor-deck-outline.md",
+      "category": "Fundraising",
+      "type": "template",
+      "created": "2026-01-28T08:30:00Z"
+    },
+    {
+      "name": "Investor Outreach Tracker",
+      "description": "Pipeline template for investor relationship management",
+      "path": "onedrive:Alfred/Deliverables/Fundraising/investor-outreach-tracker.md",
+      "category": "Fundraising",
+      "type": "spreadsheet",
+      "created": "2026-01-28T09:00:00Z"
+    },
+    {
+      "name": "Creator Economy Investor List",
+      "description": "Research on investors active in creator economy space",
+      "path": "onedrive:Alfred/Deliverables/Fundraising/creator-economy-investor-list.md",
+      "category": "Fundraising",
+      "type": "research",
+      "created": "2026-01-28T09:30:00Z"
+    },
+    {
+      "name": "Sponsor Outreach SOP",
+      "description": "VA-ready standard operating procedure for sponsorship prospecting",
+      "path": "onedrive:Alfred/Deliverables/Operations/sponsor-outreach-sop.md",
+      "category": "Operations",
+      "type": "sop",
+      "created": "2026-01-28T10:00:00Z"
+    },
+    {
+      "name": "Content Production SOP",
+      "description": "Full workflow for faceless channel content production",
+      "path": "onedrive:Alfred/Deliverables/Operations/content-production-sop.md",
+      "category": "Operations",
+      "type": "sop",
+      "created": "2026-01-28T10:30:00Z"
+    },
+    {
+      "name": "Post-Acquisition Playbook",
+      "description": "90-day integration plan for newly acquired channels",
+      "path": "onedrive:Alfred/Deliverables/Post-Acquisition/post-acquisition-playbook.md",
+      "category": "Post-Acquisition",
+      "type": "document",
+      "created": "2026-01-28T11:00:00Z"
+    },
+    {
+      "name": "Team Onboarding Checklist",
+      "description": "Onboarding process for new team members",
+      "path": "onedrive:Alfred/Deliverables/Operations/team-onboarding-checklist.md",
+      "category": "Operations",
+      "type": "document",
+      "created": "2026-01-28T11:30:00Z"
+    },
+    {
+      "name": "Channel Health Scorecard",
+      "description": "Metrics framework for monitoring channel performance",
+      "path": "onedrive:Alfred/Deliverables/Operations/channel-health-scorecard.md",
+      "category": "Operations",
+      "type": "template",
+      "created": "2026-01-28T12:00:00Z"
+    },
+    {
+      "name": "KPI Dashboard Specification",
+      "description": "Requirements for portfolio-level KPI dashboard",
+      "path": "onedrive:Alfred/Deliverables/Operations/kpi-dashboard-spec.md",
+      "category": "Operations",
+      "type": "document",
+      "created": "2026-01-28T12:30:00Z"
+    },
+    {
+      "name": "Channel Brand Guidelines",
+      "description": "Template for channel-specific brand documentation",
+      "path": "onedrive:Alfred/Deliverables/Post-Acquisition/channel-brand-guidelines.md",
+      "category": "Post-Acquisition",
+      "type": "template",
+      "created": "2026-01-28T13:00:00Z"
+    },
+    {
+      "name": "Competitor Landscape Brief",
+      "description": "Analysis of Spotter, Jellysmack, Moonbug and other roll-up players",
+      "path": "onedrive:Alfred/Deliverables/Research/competitor-landscape-brief.md",
+      "category": "Research",
+      "type": "research",
+      "created": "2026-01-28T13:30:00Z"
+    },
+    {
+      "name": "Niche Analysis Report",
+      "description": "6 niches ranked by acquisition attractiveness",
+      "path": "onedrive:Alfred/Deliverables/Research/niche-analysis-report.md",
+      "category": "Research",
+      "type": "research",
+      "created": "2026-01-28T14:00:00Z"
+    },
+    {
+      "name": "Channel Valuation Calculator",
+      "description": "Python tool for acquisition valuation (multiples based on niche, engagement, growth)",
+      "path": "/root/clawd/deliverables/tools/channel_valuation.py",
+      "category": "Tools",
+      "type": "tool",
+      "created": "2026-01-28T17:00:00Z"
+    },
+    {
+      "name": "Galactic Tools Web App",
+      "description": "Streamlit app with channel analyzer, valuation calculator, sponsorship estimator",
+      "path": "https://galactic-tools-gke57a6ss5zulghbu.streamlit.app",
+      "category": "Tools",
+      "type": "tool",
+      "created": "2026-01-28T22:16:00Z"
+    },
+    {
+      "name": "Mission Control Dashboard",
+      "description": "Real-time visibility into Alfred's operations",
+      "path": "https://cpmullican-mission-control.streamlit.app",
+      "category": "Tools",
+      "type": "tool",
+      "created": "2026-01-29T00:20:00Z"
+    }
+  ]
+}
