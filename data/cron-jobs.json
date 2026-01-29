@@ -1,0 +1,20 @@
+{
+  "jobs": [
+    {
+      "id": "weekly-memory-synthesis",
+      "schedule": "0 9 * * 0 (Sun 9am)",
+      "text": "Weekly Memory Synthesis: Review all entities in /life/areas/ that have new facts added since last synthesis...",
+      "enabled": true,
+      "nextRun": "2026-02-02T14:00:00Z",
+      "lastRun": null
+    },
+    {
+      "id": "morning-briefing",
+      "schedule": "Daily 10:55am (one-shot, expired)",
+      "text": "Morning briefing: accomplishments, deliverables, questions, priorities",
+      "enabled": true,
+      "nextRun": null,
+      "lastRun": "2026-01-28T15:55:00Z"
+    }
+  ]
+}

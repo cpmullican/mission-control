@@ -13,6 +13,12 @@ from typing import Optional
 
 import streamlit as st
 
+try:
+    from streamlit_autorefresh import st_autorefresh
+    HAS_AUTOREFRESH = True
+except ImportError:
+    HAS_AUTOREFRESH = False
+
 # Page config - MUST be first Streamlit command
 st.set_page_config(
     page_title="Alfred Mission Control",
@@ -26,6 +32,7 @@ WORKSPACE_PATH = os.environ.get("WORKSPACE_PATH", "")
 DATA_SUBDIR = "memory/dashboard"
 LOCAL_DATA_PATH = Path(__file__).parent / "data"
 REFRESH_INTERVAL = 30  # seconds
+AUTO_REFRESH_ENABLED = True
 
 
 def get_data_path(filename: str) -> Optional[Path]:
@@ -105,6 +112,14 @@ def get_subagent_tasks() -> list:
 def get_activity_feed() -> list:
     """Get activity event feed."""
     return load_jsonl_file("activity-feed.jsonl", limit=100)
+
+
+def get_cron_jobs() -> list:
+    """Get cron job list."""
+    cron_file = load_json_file("cron-jobs.json")
+    if cron_file:
+        return cron_file.get("jobs", [])
+    return []
 
 
 def format_timestamp(iso_str: str) -> str:
@@ -473,6 +488,83 @@ def page_subagents():
         st.markdown("*No completed sub-agents recorded*")
 
 
+def page_cron():
+    """Cron jobs page."""
+    st.markdown("# Scheduled Jobs")
+    
+    jobs = get_cron_jobs()
+    
+    # Separate enabled vs disabled
+    enabled_jobs = [j for j in jobs if j.get("enabled", True)]
+    disabled_jobs = [j for j in jobs if not j.get("enabled", True)]
+    
+    st.markdown(f"### ⏰ Active ({len(enabled_jobs)})")
+    
+    if enabled_jobs:
+        for job in enabled_jobs:
+            job_id = job.get("id", "unknown")
+            schedule = job.get("schedule", "—")
+            text = job.get("text", "")[:80]
+            next_run = job.get("nextRun", "")
+            last_run = job.get("lastRun", "")
+            
+            next_display = format_time_ago(next_run) if next_run else "—"
+            last_display = format_time_ago(last_run) if last_run else "never"
+            
+            st.markdown(
+                f"""
+                <div style="background: #111827; border: 1px solid #22c55e; border-radius: 12px; padding: 16px; margin-bottom: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="color: #ffffff; font-weight: 600;">⏰ {job_id}</span>
+                        <span style="color: #22c55e; font-size: 14px;">enabled</span>
+                    </div>
+                    <div style="color: #9ca3af; font-size: 14px; margin-bottom: 8px;">{text}</div>
+                    <div style="display: flex; gap: 24px;">
+                        <div>
+                            <span style="color: #6b7280; font-size: 12px;">Schedule:</span>
+                            <span style="color: #e5e7eb; font-size: 12px; margin-left: 4px;">{schedule}</span>
+                        </div>
+                        <div>
+                            <span style="color: #6b7280; font-size: 12px;">Next:</span>
+                            <span style="color: #eab308; font-size: 12px; margin-left: 4px;">{next_display}</span>
+                        </div>
+                        <div>
+                            <span style="color: #6b7280; font-size: 12px;">Last:</span>
+                            <span style="color: #6b7280; font-size: 12px; margin-left: 4px;">{last_display}</span>
+                        </div>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+    else:
+        st.markdown("*No active scheduled jobs*")
+    
+    if disabled_jobs:
+        st.markdown(f"### 💤 Disabled ({len(disabled_jobs)})")
+        for job in disabled_jobs:
+            job_id = job.get("id", "unknown")
+            text = job.get("text", "")[:60]
+            
+            st.markdown(
+                f"""
+                <div style="background: #111827; border: 1px solid #374151; border-radius: 12px; padding: 16px; margin-bottom: 8px; opacity: 0.6;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="color: #9ca3af; font-weight: 600;">⏸️ {job_id}</span>
+                        <span style="color: #6b7280; font-size: 14px;">disabled</span>
+                    </div>
+                    <div style="color: #6b7280; font-size: 14px; margin-top: 4px;">{text}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+    
+    # Refresh button
+    st.markdown("---")
+    if st.button("🔄 Refresh", key="cron_refresh"):
+        st.rerun()
+
+
 def page_activity():
     """Activity feed page."""
     st.markdown("# Activity Feed")
@@ -516,6 +608,17 @@ def page_activity():
 def main():
     """Main app entry point."""
     
+    # Auto-refresh
+    if AUTO_REFRESH_ENABLED and HAS_AUTOREFRESH:
+        # Using streamlit-autorefresh for reliable auto-refresh
+        st_autorefresh(interval=REFRESH_INTERVAL * 1000, limit=None, key="auto_refresh")
+    elif AUTO_REFRESH_ENABLED:
+        # Fallback: meta refresh tag
+        st.markdown(
+            f'<meta http-equiv="refresh" content="{REFRESH_INTERVAL}">',
+            unsafe_allow_html=True,
+        )
+    
     # Custom CSS
     st.markdown(
         """
@@ -554,7 +657,7 @@ def main():
         st.session_state.page = "home"
     
     # Navigation tabs
-    tabs = st.tabs(["🏠 Home", "💬 Sessions", "🤖 Sub-Agents", "📋 Activity"])
+    tabs = st.tabs(["🏠 Home", "💬 Sessions", "🤖 Sub-Agents", "⏰ Cron", "📋 Activity"])
     
     with tabs[0]:
         page_home()
@@ -569,6 +672,9 @@ def main():
         page_subagents()
     
     with tabs[3]:
+        page_cron()
+    
+    with tabs[4]:
         page_activity()
 
 
