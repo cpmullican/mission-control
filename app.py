@@ -6,6 +6,7 @@ Real-time visibility into agent operations
 
 import json
 import os
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
@@ -21,21 +22,19 @@ st.set_page_config(
 )
 
 # Configuration
-# Try workspace path first, fall back to local data/ folder for deployed version
 WORKSPACE_PATH = os.environ.get("WORKSPACE_PATH", "")
 DATA_SUBDIR = "memory/dashboard"
 LOCAL_DATA_PATH = Path(__file__).parent / "data"
 REFRESH_INTERVAL = 30  # seconds
 
 
-def get_data_path(filename: str) -> Path:
+def get_data_path(filename: str) -> Optional[Path]:
     """Get path to data file, checking workspace first then local."""
     if WORKSPACE_PATH:
         workspace_file = Path(WORKSPACE_PATH) / DATA_SUBDIR / filename
         if workspace_file.exists():
             return workspace_file
     
-    # Fall back to local data/ folder
     local_file = LOCAL_DATA_PATH / filename
     if local_file.exists():
         return local_file
@@ -62,7 +61,6 @@ def load_jsonl_file(filename: str, limit: int = 100) -> list:
         if full_path and full_path.exists():
             with open(full_path) as f:
                 lines = f.readlines()
-                # Get last N lines
                 recent = lines[-limit:] if len(lines) > limit else lines
                 return [json.loads(line) for line in recent if line.strip()]
     except Exception as e:
@@ -75,8 +73,6 @@ def get_agent_status() -> dict:
     status_file = load_json_file("status.json")
     if status_file:
         return status_file
-    
-    # Default status
     return {
         "online": True,
         "last_activity": datetime.now(timezone.utc).isoformat(),
@@ -90,6 +86,14 @@ def get_sessions() -> list:
     sessions_file = load_json_file("sessions.json")
     if sessions_file:
         return sessions_file.get("sessions", [])
+    return []
+
+
+def get_session_history(session_key: str) -> list:
+    """Get message history for a session."""
+    history_file = load_json_file(f"history_{session_key}.json")
+    if history_file:
+        return history_file.get("messages", [])
     return []
 
 
@@ -107,7 +111,6 @@ def format_timestamp(iso_str: str) -> str:
     """Format ISO timestamp for display."""
     try:
         dt = datetime.fromisoformat(iso_str.replace("Z", "+00:00"))
-        # Convert to local-ish display
         return dt.strftime("%I:%M %p").lstrip("0")
     except:
         return iso_str
@@ -180,41 +183,40 @@ def render_metric_card(label: str, value: str, subtitle: str = ""):
     )
 
 
-def render_session_card(session: dict):
+def render_session_card(session: dict, show_button: bool = True):
     """Render a session card."""
-    status_colors = {
-        "active": "#22c55e",
-        "idle": "#eab308",
-        "closed": "#6b7280",
-    }
-    
+    status_colors = {"active": "#22c55e", "idle": "#eab308", "closed": "#6b7280"}
     status = session.get("status", "active")
     color = status_colors.get(status, "#6b7280")
     kind = session.get("kind", "main")
     key = session.get("key", "unknown")
     last_msg = session.get("last_message_preview", "")[:80]
     timestamp = format_timestamp(session.get("last_activity", ""))
-    
     kind_emoji = {"main": "💬", "subagent": "🤖", "cron": "⏰"}.get(kind, "📋")
     
-    with st.container():
-        st.markdown(
-            f"""
-            <div style="background: #111827; border: 1px solid #1f2937; border-radius: 12px; padding: 16px; margin-bottom: 8px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="color: {color}; font-size: 16px;">●</span>
-                        <span style="color: #ffffff; font-weight: 600;">{kind_emoji} {key}</span>
-                    </div>
-                    <span style="color: #6b7280; font-size: 14px;">{timestamp}</span>
+    st.markdown(
+        f"""
+        <div style="background: #111827; border: 1px solid #1f2937; border-radius: 12px; padding: 16px; margin-bottom: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="color: {color}; font-size: 16px;">●</span>
+                    <span style="color: #ffffff; font-weight: 600;">{kind_emoji} {key}</span>
                 </div>
-                <div style="color: #9ca3af; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                    {last_msg}
-                </div>
+                <span style="color: #6b7280; font-size: 14px;">{timestamp}</span>
             </div>
-            """,
-            unsafe_allow_html=True,
-        )
+            <div style="color: #9ca3af; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                {last_msg if last_msg else "<em>No messages</em>"}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    
+    if show_button:
+        if st.button(f"View History →", key=f"btn_{key}"):
+            st.session_state.selected_session = key
+            st.session_state.page = "session_detail"
+            st.rerun()
 
 
 def render_activity_item(event: dict):
@@ -249,6 +251,39 @@ def render_activity_item(event: dict):
     )
 
 
+def render_message(msg: dict):
+    """Render a chat message."""
+    role = msg.get("role", "unknown")
+    content = msg.get("content", "")
+    timestamp = format_timestamp(msg.get("timestamp", ""))
+    
+    if role == "user":
+        bg_color = "#1e3a5f"
+        label = "👤 User"
+    elif role == "assistant":
+        bg_color = "#1f2937"
+        label = "🎩 Alfred"
+    else:
+        bg_color = "#374151"
+        label = role.title()
+    
+    # Truncate very long messages
+    display_content = content[:2000] + "..." if len(content) > 2000 else content
+    
+    st.markdown(
+        f"""
+        <div style="background: {bg_color}; border-radius: 12px; padding: 12px 16px; margin-bottom: 8px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="color: #9ca3af; font-size: 12px; font-weight: 600;">{label}</span>
+                <span style="color: #6b7280; font-size: 12px;">{timestamp}</span>
+            </div>
+            <div style="color: #e5e7eb; font-size: 14px; white-space: pre-wrap; word-wrap: break-word;">{display_content}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 # =============================================================================
 # Pages
 # =============================================================================
@@ -257,12 +292,10 @@ def page_home():
     """Home/Overview page."""
     st.markdown("# 🎩 Alfred Mission Control")
     
-    # Load data
     status = get_agent_status()
     sessions = get_sessions()
     activity = get_activity_feed()
     
-    # Status indicator
     render_status_indicator(
         status.get("online", False),
         status.get("last_activity", datetime.now(timezone.utc).isoformat())
@@ -282,8 +315,9 @@ def page_home():
         render_metric_card("Sub-Agents", str(subagent_count), "running")
     
     with col3:
-        # Next scheduled task placeholder
-        render_metric_card("Next Task", "—", "no scheduled tasks")
+        next_task = status.get("next_scheduled_task", {})
+        next_name = next_task.get("name", "—")
+        render_metric_card("Next Task", next_name[:12], "scheduled")
     
     st.markdown("---")
     
@@ -291,21 +325,25 @@ def page_home():
     st.markdown("### Recent Activity")
     
     if activity:
-        # Show last 10 events
         for event in reversed(activity[-10:]):
             render_activity_item(event)
+        
+        if len(activity) > 10:
+            st.markdown(f"*... and {len(activity) - 10} more events*")
     else:
         st.info("No recent activity recorded. Activity will appear here as Alfred works.")
     
-    # Auto-refresh hint
-    st.markdown(
-        f"""
-        <div style="color: #6b7280; font-size: 12px; text-align: center; margin-top: 24px;">
-            Auto-refresh every {REFRESH_INTERVAL} seconds • Last updated: {datetime.now().strftime("%I:%M:%S %p")}
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    # Footer with refresh info
+    st.markdown("---")
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        st.markdown(
+            f'<div style="color: #6b7280; font-size: 12px;">Last updated: {datetime.now().strftime("%I:%M:%S %p")}</div>',
+            unsafe_allow_html=True,
+        )
+    with col2:
+        if st.button("🔄 Refresh"):
+            st.rerun()
 
 
 def page_sessions():
@@ -316,12 +354,10 @@ def page_sessions():
     
     # Filter
     filter_option = st.selectbox(
-        "Filter",
+        "Filter by type",
         ["All", "Main", "Sub-Agent", "Cron"],
-        label_visibility="collapsed",
     )
     
-    # Filter sessions
     if filter_option != "All":
         kind_map = {"Main": "main", "Sub-Agent": "subagent", "Cron": "cron"}
         sessions = [s for s in sessions if s.get("kind") == kind_map.get(filter_option)]
@@ -332,11 +368,6 @@ def page_sessions():
     if sessions:
         for session in sessions:
             render_session_card(session)
-            # Make card clickable to view detail
-            if st.button(f"View History", key=f"btn_{session.get('key', '')}"):
-                st.session_state.selected_session = session.get("key")
-                st.session_state.page = "session_detail"
-                st.rerun()
     else:
         st.info("No sessions found.")
 
@@ -345,18 +376,43 @@ def page_session_detail():
     """Session detail page."""
     session_key = st.session_state.get("selected_session", "")
     
-    if st.button("← Back to Sessions"):
-        st.session_state.page = "sessions"
-        st.rerun()
+    col1, col2 = st.columns([1, 5])
+    with col1:
+        if st.button("← Back"):
+            st.session_state.page = "sessions"
+            st.rerun()
     
-    st.markdown(f"# Session: {session_key}")
+    st.markdown(f"# Session: `{session_key}`")
     
-    # In a real implementation, we'd load session history here
-    # For now, show placeholder
-    st.info(
-        "Session history will be displayed here.\n\n"
-        "This requires integration with the Clawdbot sessions_history API."
-    )
+    # Get session info
+    sessions = get_sessions()
+    session = next((s for s in sessions if s.get("key") == session_key), None)
+    
+    if session:
+        status = session.get("status", "unknown")
+        kind = session.get("kind", "unknown")
+        source = session.get("metadata", {}).get("source", "unknown")
+        
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Status", status.title())
+        col2.metric("Type", kind.title())
+        col3.metric("Source", source.title())
+        
+        st.markdown("---")
+    
+    # Get message history
+    messages = get_session_history(session_key)
+    
+    st.markdown(f"### Message History ({len(messages)} messages)")
+    
+    if messages:
+        for msg in messages:
+            render_message(msg)
+    else:
+        st.info(
+            "No message history available for this session.\n\n"
+            "History is populated when Alfred syncs dashboard data."
+        )
 
 
 def page_subagents():
@@ -366,20 +422,24 @@ def page_subagents():
     tasks = get_subagent_tasks()
     
     # Separate running vs completed
-    running = [t for t in tasks if t.get("event") == "spawned" and 
-               not any(c.get("session_key") == t.get("session_key") and c.get("event") == "completed" 
-                      for c in tasks)]
+    spawned_keys = {t.get("session_key") for t in tasks if t.get("event") == "spawned"}
+    completed_keys = {t.get("session_key") for t in tasks if t.get("event") == "completed"}
+    running_keys = spawned_keys - completed_keys
+    
+    running = [t for t in tasks if t.get("event") == "spawned" and t.get("session_key") in running_keys]
     completed = [t for t in tasks if t.get("event") == "completed"]
     
-    st.markdown(f"### Running ({len(running)})")
+    st.markdown(f"### 🔄 Running ({len(running)})")
     
     if running:
         for task in running:
             st.markdown(
                 f"""
                 <div style="background: #111827; border: 1px solid #eab308; border-radius: 12px; padding: 16px; margin-bottom: 8px;">
-                    <div style="color: #eab308; font-weight: 600;">🔄 {task.get('task', 'Unknown task')}</div>
-                    <div style="color: #6b7280; font-size: 14px;">Started: {format_time_ago(task.get('timestamp', ''))}</div>
+                    <div style="color: #eab308; font-weight: 600;">⏳ {task.get('task', 'Unknown task')}</div>
+                    <div style="color: #6b7280; font-size: 14px; margin-top: 4px;">
+                        Session: {task.get('session_key', 'unknown')} • Started: {format_time_ago(task.get('timestamp', ''))}
+                    </div>
                 </div>
                 """,
                 unsafe_allow_html=True,
@@ -387,19 +447,24 @@ def page_subagents():
     else:
         st.markdown("*No sub-agents currently running*")
     
-    st.markdown(f"### Recently Completed ({len(completed)})")
+    st.markdown(f"### ✓ Recently Completed ({len(completed)})")
     
     if completed:
         for task in reversed(completed[-10:]):
-            status_color = "#22c55e" if task.get("status") == "success" else "#ef4444"
+            status = task.get("status", "unknown")
+            status_color = "#22c55e" if status == "success" else "#ef4444"
+            status_icon = "✓" if status == "success" else "✗"
+            summary = task.get("summary", "")[:100]
+            
             st.markdown(
                 f"""
                 <div style="background: #111827; border: 1px solid #1f2937; border-radius: 12px; padding: 16px; margin-bottom: 8px;">
-                    <div style="display: flex; justify-content: space-between;">
-                        <span style="color: #e5e7eb; font-weight: 600;">✓ {task.get('session_key', 'Unknown')}</span>
-                        <span style="color: {status_color};">{task.get('status', 'unknown')}</span>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="color: #e5e7eb; font-weight: 600;">{status_icon} {task.get('session_key', 'Unknown')}</span>
+                        <span style="color: {status_color}; font-size: 14px;">{status}</span>
                     </div>
-                    <div style="color: #6b7280; font-size: 14px;">{format_time_ago(task.get('timestamp', ''))}</div>
+                    <div style="color: #9ca3af; font-size: 14px; margin-top: 4px;">{summary}</div>
+                    <div style="color: #6b7280; font-size: 12px; margin-top: 4px;">{format_time_ago(task.get('timestamp', ''))}</div>
                 </div>
                 """,
                 unsafe_allow_html=True,
@@ -414,14 +479,11 @@ def page_activity():
     
     activity = get_activity_feed()
     
-    # Filter
     filter_option = st.selectbox(
-        "Filter",
+        "Filter by type",
         ["All", "Sessions", "Tasks", "Deliverables", "Errors"],
-        label_visibility="collapsed",
     )
     
-    # Apply filter
     if filter_option != "All":
         type_map = {
             "Sessions": ["session_started", "session_ended"],
@@ -440,6 +502,11 @@ def page_activity():
             render_activity_item(event)
     else:
         st.info("No activity recorded yet.")
+    
+    # Refresh button
+    st.markdown("---")
+    if st.button("🔄 Refresh", key="activity_refresh"):
+        st.rerun()
 
 
 # =============================================================================
@@ -453,15 +520,9 @@ def main():
     st.markdown(
         """
         <style>
-            .stApp {
-                background-color: #030712;
-            }
-            .stMarkdown {
-                color: #e5e7eb;
-            }
-            section[data-testid="stSidebar"] {
-                background-color: #111827;
-            }
+            .stApp { background-color: #030712; }
+            .stMarkdown { color: #e5e7eb; }
+            section[data-testid="stSidebar"] { background-color: #111827; }
             .stButton > button {
                 background-color: #1f2937;
                 color: #e5e7eb;
@@ -471,9 +532,17 @@ def main():
                 background-color: #374151;
                 border-color: #4b5563;
             }
-            .stSelectbox > div > div {
+            .stSelectbox > div > div { background-color: #1f2937; color: #e5e7eb; }
+            .stTabs [data-baseweb="tab-list"] { gap: 8px; }
+            .stTabs [data-baseweb="tab"] {
                 background-color: #1f2937;
-                color: #e5e7eb;
+                border-radius: 8px;
+                padding: 8px 16px;
+                color: #9ca3af;
+            }
+            .stTabs [aria-selected="true"] {
+                background-color: #374151;
+                color: #ffffff;
             }
         </style>
         """,
