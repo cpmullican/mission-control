@@ -33,6 +33,7 @@ DATA_SUBDIR = "memory/dashboard"
 LOCAL_DATA_PATH = Path(__file__).parent / "data"
 REFRESH_INTERVAL = 30  # seconds
 AUTO_REFRESH_ENABLED = True
+VERSION = "1.0.0"
 
 
 def get_data_path(filename: str) -> Optional[Path]:
@@ -376,11 +377,12 @@ def page_home():
     col1, col2 = st.columns([3, 1])
     with col1:
         st.markdown(
-            f'<div style="color: #6b7280; font-size: 12px;">Last updated: {datetime.now().strftime("%I:%M:%S %p")}</div>',
+            f'<div style="color: #6b7280; font-size: 11px;">v{VERSION} • Updated {datetime.now().strftime("%I:%M:%S %p")} • Auto-refresh {REFRESH_INTERVAL}s</div>',
             unsafe_allow_html=True,
         )
     with col2:
         if st.button("🔄 Refresh"):
+            st.cache_data.clear()
             st.rerun()
 
 
@@ -811,8 +813,8 @@ def _main_content():
     if "page" not in st.session_state:
         st.session_state.page = "home"
     
-    # Navigation tabs
-    tabs = st.tabs(["🏠 Home", "💬 Sessions", "🤖 Sub-Agents", "⏰ Cron", "📦 Deliverables", "📋 Activity"])
+    # Navigation tabs (compact labels)
+    tabs = st.tabs(["🏠 Home", "💬 Chat", "🤖 Agents", "⏰ Jobs", "📦 Files", "📋 Log"])
     
     with tabs[0]:
         page_home()
